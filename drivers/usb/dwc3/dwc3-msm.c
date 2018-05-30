@@ -3009,8 +3009,9 @@ static void dwc3_ext_event_notify(struct dwc3_msm *mdwc)
 			queue_delayed_work(mdwc->sm_usb_wq, &mdwc->sm_work, 0);
 		return;
 	}
-
+#ifndef CONFIG_LGE_PM
 	pm_stay_awake(mdwc->dev);
+#endif
 	queue_delayed_work(mdwc->sm_usb_wq, &mdwc->sm_work, 0);
 }
 
@@ -3136,8 +3137,10 @@ static irqreturn_t msm_dwc3_pwr_irq(int irq, void *data)
 	 * all other power events.
 	 */
 	if (atomic_read(&dwc->in_lpm)) {
+#ifndef CONFIG_LGE_PM
 		if (!mdwc->no_wakeup_src_in_hostmode || !mdwc->in_host_mode)
 			pm_stay_awake(mdwc->dev);
+#endif
 
 		/* set this to call dwc3_msm_resume() */
 		mdwc->resume_pending = true;
@@ -3360,7 +3363,9 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 
 #else
 			dbg_event(0xFF, "stayID", 0);
+#ifndef CONFIG_LGE_PM
 			pm_stay_awake(mdwc->dev);
+#endif
 			queue_delayed_work(mdwc->dwc3_resume_wq,
 					&mdwc->resume_work, 0);
 
@@ -3422,7 +3427,9 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 			dbg_event(0xFF, "stayVbus", 0);
 			/* Ignore !vbus on stop_host */
 			if (mdwc->vbus_active || test_bit(ID, &mdwc->inputs)) {
+#ifndef CONFIG_LGE_PM
 				pm_stay_awake(mdwc->dev);
+#endif
 				queue_delayed_work(mdwc->dwc3_resume_wq,
 					&mdwc->resume_work, 0);
 			}
@@ -3704,7 +3711,9 @@ static irqreturn_t dwc3_pmic_id_irq(int irq, void *data)
 	if (mdwc->id_state != id) {
 		mdwc->id_state = id;
 		dbg_event(0xFF, "stayIDIRQ", 0);
+#ifndef CONFIG_LGE_PM
 		pm_stay_awake(mdwc->dev);
+#endif
 		queue_delayed_work(mdwc->dwc3_resume_wq, &mdwc->resume_work, 0);
 	}
 
@@ -4386,7 +4395,9 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		register_cpu_notifier(&mdwc->dwc3_cpu_notifier);
 
 	device_init_wakeup(mdwc->dev, 1);
+#ifndef CONFIG_LGE_PM
 	pm_stay_awake(mdwc->dev);
+#endif
 
 	if (of_property_read_bool(node, "qcom,disable-dev-mode-pm"))
 		pm_runtime_get_noresume(mdwc->dev);
@@ -5582,9 +5593,11 @@ static void dwc3_msm_otg_sm_work(struct work_struct *w)
 			dbg_event(0xFF, "XHCIResume", 0);
 			if (dwc)
 				pm_runtime_resume(&dwc->xhci->dev);
+#ifndef CONFIG_LGE_PM
 			if (mdwc->no_wakeup_src_in_hostmode)
 				pm_wakeup_event(mdwc->dev,
 						DWC3_WAKEUP_SRC_TIMEOUT);
+#endif
 		}
 		break;
 
